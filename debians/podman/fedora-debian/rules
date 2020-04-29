@@ -1,0 +1,64 @@
+#!/usr/bin/make -f
+# See debhelper(7) (uncomment to enable)
+# output every command that modifies files on the build system.
+export DH_VERBOSE = 1
+
+# see FEATURE AREAS in dpkg-buildflags(1)
+#export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+# see ENVIRONMENT in dpkg-buildflags(1)
+# package maintainers to append CFLAGS
+#export DEB_CFLAGS_MAINT_APPEND  = -Wall -pedantic
+# package maintainers to append LDFLAGS
+#export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed
+
+export DH_GOPKG := github.com/containers/libpod
+export DH_GOLANG_BUILDPKG := $(DH_GOPKG)/pkg/varlink $(DH_GOPKG)/cmd/podman
+export GO111MODULE := on
+export GOFLAGS := -mod=vendor
+export DH_GOLANG_GO_GENERATE := 1
+export DH_GOLANG_INSTALL_EXTRA := pkg/varlink/io.podman.varlink
+
+GCFLAGS ?= all=-trimpath=${PWD}
+ASMFLAGS ?= all=-trimpath=${PWD}
+
+LDFLAGS_PODMAN ?= \
+	  -X $(LIBPOD)/define.buildInfo=$(shell date "+%s") \
+	  -X $(LIBPOD)/config._installPrefix=/usr \
+	  -X $(LIBPOD)/config._etcDir=/etc
+
+BUILDTAGS ?= \
+	$(shell hack/apparmor_tag.sh) \
+	$(shell hack/btrfs_installed_tag.sh) \
+	$(shell hack/btrfs_tag.sh) \
+	$(shell hack/selinux_tag.sh) \
+	$(shell hack/systemd_tag.sh) \
+	exclude_graphdriver_devicemapper \
+	seccomp \
+	varlink
+
+DOCSOURCEDIR := docs/source/markdown
+DOCTARGETDIR=$(wildcard obj-*-linux-gnu)/docs
+DOC_LIST := $(shell ls $(DOCSOURCEDIR)/podman*.1.md | \
+												sed -e 's/\.1\.md//g')
+
+%:
+	dh $@ --buildsystem=golang --with=golang,bash-completion
+
+override_dh_auto_build:
+	#pwd && ls -d obj*
+	dh_auto_build --buildsystem=golang -- \
+			$(BUILDFLAGS) -gcflags '$(GCFLAGS)' -asmflags '$(ASMFLAGS)' \
+			-ldflags '$(LDFLAGS_PODMAN)' -tags "ABISupport $(BUILDTAGS)"
+	mkdir -p $(DOCTARGETDIR)
+	$(foreach doc,$(DOC_LIST), \
+			go-md2man -in $(doc).1.md -out $(DOCTARGETDIR)/$(shell basename $(doc)).1;)
+	cp $(DOCSOURCEDIR)/links/*.1 $(DOCTARGETDIR)/
+
+override_dh_auto_test:
+
+override_dh_auto_install:
+	dh_auto_install -- --no-source
+
+override_dh_installman:
+	dh_installman $(DOCTARGETDIR)/*.1

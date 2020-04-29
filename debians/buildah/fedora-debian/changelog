@@ -1,0 +1,5 @@
+buildah (1.14.8-0~0ubuntu0~ppa1~20.04) focal; urgency=medium
+
+  * Try to align BUILDTAGS and LDFLAGS with the upstream.
+
+ -- Jonathan Springer <jspringer@us.ibm.com>  Sun, 26 Apr 2020 11:21:49 -0400

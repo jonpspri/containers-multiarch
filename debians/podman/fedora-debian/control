@@ -1,0 +1,36 @@
+Source: podman
+Section: devel
+Priority: optional
+Maintainer: Jonathan Springer <jonpspri@unknown>
+Build-Depends: debhelper-compat (= 12),
+  bash-completion,
+  dh-golang,
+  golang-go,
+  go-md2man,
+  libgpgme-dev,
+  libseccomp-dev,
+  pkg-config
+Standards-Version: 4.4.1
+Homepage: https://github.com/containers/libpod
+Vcs-Browser: https://github.com/containers/libpod
+Vcs-Git: https://github.com/containers/libpod.git
+
+Package: podman
+Architecture: any
+Depends: ${misc:Depends},
+  libgpgme11,
+  libseccomp2
+Description: a library used to create container pods. Home of Podman.
+ At a high level, the scope of libpod and Podman is the following:
+ .
+    * Support multiple image formats including the OCI and Docker
+      image formats.
+    * Support for multiple means to download images including trust &
+      image verification.
+    * Container image management (managing image layers, overlay
+      filesystems, etc).
+    * Full management of container lifecycle.
+    * Support for pods to manage groups of containers together.
+    * Resource isolation of containers and pods.
+    * Support for a Docker-compatible CLI interface through Podman.
+    * Integration with CRI-O to share containers and backend code.

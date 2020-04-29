@@ -1,0 +1,5 @@
+podman (1.9.0-1~0ubuntu0~ppa1) fedora; urgency=medium
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- Jonathan Springer <jonpspri@unknown>  Tue, 28 Apr 2020 08:02:54 -0400

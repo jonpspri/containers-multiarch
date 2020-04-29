@@ -1,0 +1,49 @@
+#!/usr/bin/make -f
+# See debhelper(7) (uncomment to enable)
+# output every command that modifies files on the build system.
+export DH_VERBOSE = 1
+
+# see FEATURE AREAS in dpkg-buildflags(1)
+#export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+# see ENVIRONMENT in dpkg-buildflags(1)
+# package maintainers to append CFLAGS
+#export DEB_CFLAGS_MAINT_APPEND  = -Wall -pedantic
+# package maintainers to append LDFLAGS
+#export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed
+
+export DH_GOPKG := github.com/containers/buildah
+export DH_GOLANG_BUILDPKG := $(DH_GOPKG)/cmd/buildah
+export GO111MODULE := on
+export GOFLAGS := -mod=vendor
+
+SELINUXTAG := $(shell ./selinux_tag.sh)
+APPARMORTAG := $(shell hack/apparmor_tag.sh)
+STORAGETAGS := $(shell ./btrfs_tag.sh) $(shell ./btrfs_installed_tag.sh) $(shell ./libdm_tag.sh)
+SECURITYTAGS ?= seccomp $(SELINUXTAG) $(APPARMORTAG)
+TAGS ?= $(SECURITYTAGS) $(STORAGETAGS)
+BUILDFLAGS := -tags "$(TAGS)"
+
+BUILD_INFO=$(shell date +%s)
+CNI_COMMIT := $(shell sed -n 's;\tgithub.com/containernetworking/cni \([^ \n]*\).*$\;\1;p' go.mod)
+LDFLAGS=-ldflags "-X main.buildInfo=$(BUILD_INFO) -X main.cniVersion=$(CNI_COMMIT)"
+
+DOCTARGETDIR=$(wildcard obj-*-linux-gnu)/docs
+DOC_LIST := $(shell ls docs/buildah*.md | sed -e 's/\.md//g')
+
+%:
+	dh $@ --buildsystem=golang --with=golang,bash-completion
+
+override_dh_auto_build:
+	dh_auto_build --buildsystem=golang -- $(BUILDFLAGS) $(LDFLAGS)
+	mkdir -p $(DOCTARGETDIR)
+	$(foreach doc,$(DOC_LIST), \
+			go-md2man -in docs/$(doc).md -out $(DOCTARGETDIR)/$(doc).1;)
+
+override_dh_auto_test:
+
+override_dh_auto_install:
+	dh_auto_install -- --no-source
+
+override_dh_installman:
+	dh_installman $(DOCTARGETDIR)/*.1
