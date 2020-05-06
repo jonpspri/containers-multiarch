@@ -1,2 +1,2 @@
-/secrets/*
-!/secrets/.keep
+/docker/secrets/*
+!/docker/secrets/README.md

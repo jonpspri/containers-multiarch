@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+options=$(getopt -o '' --long package:,release:,prefix:,pparoot: -- "$@")
+[ $? -eq 0 ] || {
+    echo "Incorrect option provided"
+    exit 1
+}
+
+package_filter='.*'
+release_filter='.*'
+prefix=springjp
+pparoot='ppa:jonpspri/containers'
+
+
+eval set -- "$options"
+
+while true; do
+  case "$1" in
+    --package) shift; package_filter=$1;;
+    --release) shift; release_filter=$1;;
+    --prefix) shift; prefix=$1;;
+    --pparoot) shift; pparoot=$1;;
+    --) shift; break;;
+  esac
+  shift
+done
+
+scriptdir=$(realpath "$(dirname -- $0)")
+yq -Mc '.' "${scriptdir}/../meta/builds.yaml" \
+| jq -r --arg package_filter "${package_filter}" \
+  --arg release_filter "${release_filter}" \
+  -f ${scriptdir}/meta_reader.jq \
+| while read line; do {
+  declare source_package git_ref release
+  eval ${line}
+  echo '------------------------------------------------------------'
+  echo "Putting ${prefix}/${source_package}:${git_ref}-${release}... "
+  #
+  #  Force a pull because the image may have been recompiled.  I think I need
+  #  to change my tagging algorithm.  *sigh*
+  #
+  docker pull ${prefix}/${source_package}:${git_ref}-${release}
+  #
+  #  Upload the latest to the launchpad maintenance site.
+  #
+  docker run \
+    ${prefix}/${source_package}:${git_ref}-${release} \
+    sh -c "dput --unchecked ${pparoot}-${release} /debs/*_source.changes "
+  echo '------------------------------------------------------------'
+}; done
