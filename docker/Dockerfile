@@ -15,6 +15,12 @@ RUN : \
 WORKDIR /mc
 RUN go install
 
+#  --------------------------------------------------------------------------
+#
+#  The build of the actual package starts here...
+#
+#  --------------------------------------------------------------------------
+
 FROM ubuntu:$UBUNTU_RELEASE AS builder
 SHELL [ "/bin/bash", "-eou", "pipefail", "-c" ]
 
@@ -22,12 +28,13 @@ SHELL [ "/bin/bash", "-eou", "pipefail", "-c" ]
 RUN : \
  && apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      apt-utils \
       build-essential \
       curl ca-certificates \
       devscripts equivs \
       dpkg-dev \
       git \
-      gpg \
+      gpg gpg-agent \
       lsb-release \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
@@ -73,7 +80,8 @@ RUN --mount=type=secret,id=gpgkey : \
  && trap 'rm -rf "$HOME/.gpg"' EXIT \
  && gpg --import /run/secrets/gpgkey \
  #  vvv Change the relase to match UBUNTU_RELEASE -- our little bit of magic
- && sed -i "1s/\\S*;/$(lsb_release -cs);/" debian/changelog \
+ && release=$(lsb_release -cs) \
+ && sed -i "1s/\\s*)\\s*\\S*;/~${release}) ${release};/" debian/changelog \
  && debuild -b \
  && { debuild -S -sa || { shopt -s nullglob && cat /tmp/*.diff.* && exit 12; }; } \
  && :

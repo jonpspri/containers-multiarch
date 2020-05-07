@@ -29,27 +29,27 @@ done
 #         it along a search path
 #
 scriptdir=$(realpath "$(dirname -- $0)")
-yq -Mc '.' "${scriptdir}/../meta/builds.yaml" \
-| jq -r --arg package_filter "${package_filter}" \
+jq -r --arg package_filter "${package_filter}" \
   --arg release_filter "${release_filter}" \
   -f ${scriptdir}/meta_reader.jq \
-| while read line; do (
+  "${scriptdir}/../meta/builds.json" \
+| while read line; do
   #shellcheck disable=SC2064
   trap "rm -r /tmp/src.$$ >/dev/null" EXIT
-  cd $scriptdir/../docker
-  declare release source_package git_repository git_ref original_tarball_url
+  declare releases source_package git_repository git_ref original_tarball_url
   eval ${line}
-  #
-  #  TODO:  Break this into a script so it can be executed with GNU parallel
-  #
 
   #  Retreive the actual hash for the reference, so fresh builds are triggered
-  #  if some inconsiderate programmer has moved a tag or committed to a branch.
+  #  if some inconsiderate programmer has moved a tag or force-committed to a
+  #  branch.
+  echo "Retreiving git repository for ${source_package} ${git_ref}"
   git clone ${git_repository} /tmp/src.$$
   git -C /tmp/src.$$ config advice.detachedHead false
   git_hash=$(git -C /tmp/src.$$ show-ref -s ${git_ref})
   git -C /tmp/src.$$ checkout ${git_hash}
+  version=$(gsed -n '1s/^.*(\s*\([-0-9\.]*\)[^-0-9\.].*$/\1/p' /tmp/src.$$/debian/changelog)
 
+  #  TODO:  Move definition of this into the build.json file.
   declare platform
   if egrep '^Architecture:\s+any\s*$' /tmp/src.$$/debian/control >/dev/null
   then
@@ -57,34 +57,40 @@ yq -Mc '.' "${scriptdir}/../meta/builds.yaml" \
   else
     platform=linux/amd64
   fi
+  rm -r /tmp/src.$$
 
-  #  Execute a build across all platforms of interest
-  #
-  #  TODO:  Add a platform argument to the YAML so that non-binary builds are
-  #         not running across redundant platforms.  Maybe a builder argument,
-  #         too?
-  docker buildx build \
-    --build-arg UBUNTU_RELEASE=${release} \
-    --build-arg GIT_REPOSITORY=${git_repository} \
-    --build-arg GIT_REF=${git_hash} \
-    --build-arg ORIGINAL_TARBALL_URL=${original_tarball_url} \
-    --secret id=gpgkey,src=secrets/gpgkey -t ${prefix}/${source_package}:${git_ref}-${release} \
-    --platform ${platform} --push .
-  #
-  #  Read the just-created manifest and use it to iterate through the images
-  #  created and upload the manifests.
-  #
-  #  TODO:  Use parallel and contexts to offload the work and make it
-  #         asynchronous.
-  #
-  docker manifest inspect -v springjp/${source_package}:${git_ref}-${release} \
-  | jq -r '[.]|flatten|.[]|.Descriptor.digest' \
-  | while read digest; do
-    echo ---------------------------------------------------------------------
-    #docker run springjp/${package}:${git_ref}@${digest} ls /build
-    docker run --mount type=bind,src=$HOME/.mc/config.json,dst=/root/.mc/config.json \
-      ${prefix}/${source_package}@${digest} \
-      sh -c "mc -q cp /debs/*.deb ibmcloud/buildah-debs/${release}/"
-    echo ---------------------------------------------------------------------
+  for release in ${releases}; do
+
+    #  Execute a build across all platforms of interest
+    #
+    #  TODO:  Add a platform argument to the YAML so that non-binary builds are
+    #         not running across redundant platforms.  Maybe a builder argument,
+    #         too?
+    cd $scriptdir/../docker
+    echo "Building ${prefix}/${source_package}:${version}_${release} ..."
+    docker buildx build \
+      --build-arg UBUNTU_RELEASE=${release} \
+      --build-arg GIT_REPOSITORY=${git_repository} \
+      --build-arg GIT_REF=${git_hash} \
+      --build-arg ORIGINAL_TARBALL_URL=${original_tarball_url} \
+      --secret id=gpgkey,src=secrets/gpgkey \
+      --tag ${prefix}/${source_package}:${version}_${release} \
+      --platform ${platform} --push .
+    #
+    #  Read the just-created manifest and use it to iterate through the images
+    #  created and upload the manifests.
+    #
+    #  TODO:  Use parallel and contexts to offload the work and make it
+    #         asynchronous.
+    #
+    docker manifest inspect -v springjp/${source_package}:${version}_${release} \
+    | jq -r '[.]|flatten|.[]|.Descriptor.digest' \
+    | while read digest; do
+      #docker run springjp/${package}:${git_ref}@${digest} ls /build
+      docker run --rm \
+        --mount type=bind,src=$HOME/.mc/config.json,dst=/root/.mc/config.json \
+        ${prefix}/${source_package}@${digest} \
+        sh -c "mc -q cp /debs/*.deb ibmcloud/buildah-debs/${release}/"
+    done
   done
-) done
+done

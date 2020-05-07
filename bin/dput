@@ -11,7 +11,7 @@ options=$(getopt -o '' --long package:,release:,prefix:,pparoot: -- "$@")
 package_filter='.*'
 release_filter='.*'
 prefix=springjp
-pparoot='ppa:jonpspri/containers'
+pparoot='ppa:jonpspri/containers-multiarch'
 
 
 eval set -- "$options"
@@ -28,25 +28,38 @@ while true; do
 done
 
 scriptdir=$(realpath "$(dirname -- $0)")
-yq -Mc '.' "${scriptdir}/../meta/builds.yaml" \
-| jq -r --arg package_filter "${package_filter}" \
+jq -r --arg package_filter "${package_filter}" \
   --arg release_filter "${release_filter}" \
   -f ${scriptdir}/meta_reader.jq \
-| while read line; do {
-  declare source_package git_ref release
+  "${scriptdir}/../meta/builds.json" \
+| while read line
+do
+  #shellcheck disable=SC2064
+  trap "rm -r /tmp/src.$$ >/dev/null" EXIT
+
+  declare git_repository source_package git_ref releases
   eval ${line}
-  echo '------------------------------------------------------------'
-  echo "Putting ${prefix}/${source_package}:${git_ref}-${release}... "
-  #
-  #  Force a pull because the image may have been recompiled.  I think I need
-  #  to change my tagging algorithm.  *sigh*
-  #
-  docker pull ${prefix}/${source_package}:${git_ref}-${release}
-  #
-  #  Upload the latest to the launchpad maintenance site.
-  #
-  docker run \
-    ${prefix}/${source_package}:${git_ref}-${release} \
-    sh -c "dput --unchecked ${pparoot}-${release} /debs/*_source.changes "
-  echo '------------------------------------------------------------'
-}; done
+
+
+  #  Retreive the actual hash for the reference, so fresh builds are triggered
+  #  if some inconsiderate programmer has moved a tag or committed to a branch.
+  echo "Retreiving git repository for ${source_package} ${git_ref}"
+  git clone ${git_repository} /tmp/src.$$
+  git -C /tmp/src.$$ config advice.detachedHead false
+  git_hash=$(git -C /tmp/src.$$ show-ref -s ${git_ref})
+  git -C /tmp/src.$$ checkout ${git_hash}
+  version=$(gsed -n '1s/^.*(\s*\([-0-9\.]*\)[~)\s].*$/\1/p' /tmp/src.$$/debian/changelog)
+  rm -r /tmp/src.$$
+
+  for release in ${releases}; do
+    echo '------------------------------------------------------------'
+    echo "Putting ${prefix}/${source_package}:${version}_${release} to ${pparoot}... "
+    #
+    #  Upload the latest to the launchpad maintenance site.
+    #
+    docker run --rm \
+      ${prefix}/${source_package}:${version}_${release} \
+      sh -c "dput --unchecked ${pparoot} /debs/*_source.changes "
+    echo '------------------------------------------------------------'
+  done
+done
