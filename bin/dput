@@ -40,7 +40,6 @@ do
   declare git_repository source_package git_ref releases
   eval ${line}
 
-
   #  Retreive the actual hash for the reference, so fresh builds are triggered
   #  if some inconsiderate programmer has moved a tag or committed to a branch.
   echo "Retreiving git repository for ${source_package} ${git_ref}"
@@ -51,7 +50,8 @@ do
   version=$(gsed -n '1s/^.*(\s*\([-0-9\.]*\)[~)\s].*$/\1/p' /tmp/src.$$/debian/changelog)
   rm -r /tmp/src.$$
 
-  for release in ${releases}; do
+  for release_string in ${releases}; do
+    IFS=':' read -r release _ <<< ${release_string}
     echo '------------------------------------------------------------'
     echo "Putting ${prefix}/${source_package}:${version}_${release} to ${pparoot}... "
     #

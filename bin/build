@@ -47,6 +47,7 @@ jq -r --arg package_filter "${package_filter}" \
   git clone ${git_repository} /tmp/src.$$
   git -C /tmp/src.$$ config advice.detachedHead false
   git_hash=$(git -C /tmp/src.$$ show-ref -s ${git_ref})
+  [ -z "${git_hash}" ] && { echo ${git_ref} not found in git repository; exit 12; }
   git -C /tmp/src.$$ checkout ${git_hash}
   version=$(gsed -n '1s/^.*(\s*\([-0-9\.]*\)[^-0-9\.].*$/\1/p' /tmp/src.$$/debian/changelog)
 

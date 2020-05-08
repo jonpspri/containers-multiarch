@@ -34,9 +34,17 @@
   {
     "releases": [ "bionic", "eoan", "focal" ],
     "source_package": "containers-image",
-    "git_repository": "https://github.com/jonpspri/image.git",
+    "git_repository": "https://github.com/jonpspri/containers-image.git",
     "git_ref": "v5.4.3-deb",
     "original_tarball_url": "https://github.com/containers/image/archive/v5.4.3.tar.gz",
     "architectures": [ "amd64" ]
+  },
+  {
+    "releases": [ "bionic", "eoan", "focal" ],
+    "source_package": "containernetworking-plugins",
+    "git_repository": "https://github.com/jonpspri/containernetworking-plugins.git",
+    "git_ref": "v0.8.5-deb",
+    "original_tarball_url": "https://github.com/containernetworking/plugins/archive/v0.8.5.tar.gz",
+    "architectures": [ "amd64", "arm64", "s390x", "ppc64le"  ]
   }
 ]
