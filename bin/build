@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-options=$(getopt -o '' --long package:,release:,prefix: -- "$@")
+options=$(getopt -o '' --long package:,release:,prefix:,platform-override: -- "$@")
 [ $? -eq 0 ] || {
     echo "Incorrect option provided"
     exit 1
@@ -19,6 +19,7 @@ while true; do
     --package) shift; package_filter=$1;;
     --release) shift; release_filter=$1;;
     --prefix) shift; prefix=$1;;
+    --platform-override) shift; platform_override=$1;;
     --) shift; break;;
   esac
   shift
@@ -50,16 +51,17 @@ jq -r --arg package_filter "${package_filter}" \
   version=$(gsed -n '1s/^.*(\s*\([-0-9\.]*\)[^-0-9\.].*$/\1/p' /tmp/src.$$/debian/changelog)
 
   #  TODO:  Move definition of this into the build.json file.
-  declare platform
-  if egrep '^Architecture:\s+any\s*$' /tmp/src.$$/debian/control >/dev/null
-  then
-    platform=linux/amd64,linux/arm64,linux/s390x,linux/ppc64le #,linux/arm/v7
-  else
-    platform=linux/amd64
-  fi
-  rm -r /tmp/src.$$
+  # declare platform
+  # if egrep '^Architecture:\s+any\s*$' /tmp/src.$$/debian/control >/dev/null
+  # then
+  #   platform=linux/amd64,linux/arm64,linux/s390x,linux/ppc64le #,linux/arm/v7
+  # else
+  #   platform=linux/amd64
+  # fi
+  # rm -r /tmp/src.$$
 
-  for release in ${releases}; do
+  for release_string in ${releases}; do
+    IFS=':' read -r release platform_json <<< "${release_string}"
 
     #  Execute a build across all platforms of interest
     #
@@ -75,7 +77,7 @@ jq -r --arg package_filter "${package_filter}" \
       --build-arg ORIGINAL_TARBALL_URL=${original_tarball_url} \
       --secret id=gpgkey,src=secrets/gpgkey \
       --tag ${prefix}/${source_package}:${version}_${release} \
-      --platform ${platform} --push .
+      --platform ${platform_override:-${platform_json}} --push .
     #
     #  Read the just-created manifest and use it to iterate through the images
     #  created and upload the manifests.
