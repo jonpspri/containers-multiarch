@@ -30,10 +30,10 @@ done
 #         it along a search path
 #
 scriptdir=$(realpath "$(dirname -- $0)")
-jq -r --arg package_filter "${package_filter}" \
+yq '.' "${scriptdir}/../meta/builds.yaml" \
+| jq -r --arg package_filter "${package_filter}" \
   --arg release_filter "${release_filter}" \
   -f ${scriptdir}/meta_reader.jq \
-  "${scriptdir}/../meta/builds.json" \
 | while read line; do
   (
   srcdir="/tmp/src.$BASHPID"
@@ -53,7 +53,7 @@ jq -r --arg package_filter "${package_filter}" \
   git_hash=$(git -C "${srcdir}" show-ref -s ${git_ref})
   [ -z "${git_hash}" ] && { echo ${git_ref} not found in git repository; exit 12; }
   git -C "${srcdir}" checkout ${git_hash}
-  version=$(gsed -n '1s/^.*(\s*\([-0-9~a-z\.]*\)[^-0-9\.].*$/\1/p' "${srcdir}"/debian/changelog | tr '~' '_')
+  version=$(sed -n '1s/^.*(\s*\([-0-9~a-z\.]*\)[^-0-9\.].*$/\1/p' "${srcdir}"/debian/changelog | tr '~' '_')
 
   for release_string in ${releases}; do
     IFS=':' read -r release platform_json <<< "${release_string}"

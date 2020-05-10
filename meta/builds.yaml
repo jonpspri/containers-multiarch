@@ -1,0 +1,50 @@
+---
+# yamllint disable rule:line-length
+- "releases": ["bionic", "eoan", "focal"]
+  "source_package": "podman"
+  "git_repository": "https://github.com/jonpspri/libpod.git"
+  "git_ref": "v1.9.1-deb"
+  "original_tarball_url": "https://github.com/containers/libpod/archive/v1.9.1.tar.gz"
+  "architectures": ["amd64", "arm64", "s390x", "ppc64le"]
+
+- "releases": ["bionic", "eoan", "focal"]
+  "source_package": "buildah"
+  "git_repository": "https://github.com/jonpspri/buildah.git"
+  "git_ref": "v1.14.8-deb"
+  "original_tarball_url": "https://github.com/containers/buildah/archive/v1.14.8.tar.gz"
+  "architectures": ["amd64", "arm64", "s390x", "ppc64le"]
+
+- "releases": ["bionic", "eoan", "focal"]
+  "source_package": "skopeo"
+  "git_repository": "https://github.com/jonpspri/skopeo.git"
+  "git_ref": "v0.2.0-deb"
+  "original_tarball_url": "https://github.com/containers/skopeo/archive/v0.2.0.tar.gz"
+  "architectures": ["amd64", "arm64", "s390x", "ppc64le"]
+
+- "releases": ["bionic", "eoan", "focal"]
+  "source_package": "containers-golang"
+  "git_repository": "https://github.com/jonpspri/containers-golang.git"
+  "git_ref": "v0.3.2-deb"
+  "original_tarball_url": "https://github.com/seccomp/containers-golang/archive/v0.3.2.tar.gz"
+  "architectures": "amd64"
+
+- "releases": ["bionic", "eoan", "focal"]
+  "source_package": "containers-image"
+  "git_repository": "https://github.com/jonpspri/containers-image.git"
+  "git_ref": "v5.4.3-deb"
+  "original_tarball_url": "https://github.com/containers/image/archive/v5.4.3.tar.gz"
+  "architectures": "amd64"
+
+- "releases": ["bionic", "eoan"]
+  "source_package": "containernetworking-plugins"
+  "git_repository": "https://github.com/jonpspri/containernetworking-plugins.git"
+  "git_ref": "v0.8.5-deb"
+  "original_tarball_url": "https://github.com/containernetworking/plugins/archive/v0.8.5.tar.gz"
+  "architectures": ["amd64", "arm64", "s390x", "ppc64le"]
+
+- "releases": "bionic"
+  "source_package": "conmon"
+  "git_repository": "https://github.com/jonpspri/conmon.git"
+  "git_ref": "v2.0.15-deb"
+  "original_tarball_url": "https://github.com/containers/conmon/archive/v2.0.15.tar.gz"
+  "architectures": ["amd64", "arm64", "s390x", "ppc64le"]

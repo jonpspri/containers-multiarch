@@ -28,10 +28,10 @@ while true; do
 done
 
 scriptdir=$(realpath "$(dirname -- $0)")
-jq -r --arg package_filter "${package_filter}" \
+yq -cM '.' "${scriptdir}/../meta/builds.yaml" \
+| jq -r --arg package_filter "${package_filter}" \
   --arg release_filter "${release_filter}" \
   -f ${scriptdir}/meta_reader.jq \
-  "${scriptdir}/../meta/builds.json" \
 | while read line
 do
   (
@@ -50,7 +50,7 @@ do
   git -C "${srcdir}" config advice.detachedHead false
   git_hash=$(git -C "${srcdir}" show-ref -s ${git_ref})
   git -C "${srcdir}" checkout ${git_hash}
-  version=$(gsed -n '1s/^.*(\s*\([-0-9~a-z\.]*\)[^-0-9\.].*$/\1/p' "${srcdir}"/debian/changelog | tr '~' '_')
+  version=$(sed -n '1s/^.*(\s*\([-0-9~a-z\.]*\)[^-0-9\.].*$/\1/p' "${srcdir}"/debian/changelog | tr '~' '_')
 
   for release_string in ${releases}; do
     IFS=':' read -r release _ <<< ${release_string}
