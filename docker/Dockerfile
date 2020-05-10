@@ -82,6 +82,7 @@ RUN --mount=type=secret,id=gpgkey : \
  #  vvv Change the relase to match UBUNTU_RELEASE -- our little bit of magic
  && release=$(lsb_release -cs) \
  && sed -i "1s/\\s*)\\s*\\S*;/~${release}) ${release};/" debian/changelog \
+ && head -1 debian/changelog \
  && debuild -b \
  && { debuild -S -sa || { shopt -s nullglob && cat /tmp/*.diff.* && exit 12; }; } \
  && :

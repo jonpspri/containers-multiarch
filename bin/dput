@@ -10,7 +10,7 @@ options=$(getopt -o '' --long package:,release:,prefix:,pparoot: -- "$@")
 
 package_filter='.*'
 release_filter='.*'
-prefix=springjp
+prefix='us.icr.io/containers-multiarch'
 pparoot='ppa:jonpspri/containers-multiarch'
 
 
@@ -34,8 +34,11 @@ jq -r --arg package_filter "${package_filter}" \
   "${scriptdir}/../meta/builds.json" \
 | while read line
 do
+  (
+  srcdir="/tmp/src.$BASHPID"
+
   #shellcheck disable=SC2064
-  trap "rm -r /tmp/src.$$ >/dev/null" EXIT
+  trap "rm -r ${srcdir} >/dev/null" EXIT
 
   declare git_repository source_package git_ref releases
   eval ${line}
@@ -43,12 +46,11 @@ do
   #  Retreive the actual hash for the reference, so fresh builds are triggered
   #  if some inconsiderate programmer has moved a tag or committed to a branch.
   echo "Retreiving git repository for ${source_package} ${git_ref}"
-  git clone ${git_repository} /tmp/src.$$
-  git -C /tmp/src.$$ config advice.detachedHead false
-  git_hash=$(git -C /tmp/src.$$ show-ref -s ${git_ref})
-  git -C /tmp/src.$$ checkout ${git_hash}
-  version=$(gsed -n '1s/^.*(\s*\([-0-9\.]*\)[~)\s].*$/\1/p' /tmp/src.$$/debian/changelog)
-  rm -r /tmp/src.$$
+  git clone ${git_repository} "${srcdir}"
+  git -C "${srcdir}" config advice.detachedHead false
+  git_hash=$(git -C "${srcdir}" show-ref -s ${git_ref})
+  git -C "${srcdir}" checkout ${git_hash}
+  version=$(gsed -n '1s/^.*(\s*\([-0-9~a-z\.]*\)[^-0-9\.].*$/\1/p' "${srcdir}"/debian/changelog | tr '~' '_')
 
   for release_string in ${releases}; do
     IFS=':' read -r release _ <<< ${release_string}
@@ -62,4 +64,5 @@ do
       sh -c "dput --unchecked ${pparoot} /debs/*_source.changes "
     echo '------------------------------------------------------------'
   done
+  )
 done

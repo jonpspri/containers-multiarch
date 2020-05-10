@@ -10,7 +10,7 @@ options=$(getopt -o '' --long package:,release:,prefix:,platform-override: -- "$
 
 package_filter='.*'
 release_filter='.*'
-prefix=springjp
+prefix='us.icr.io/containers-multiarch'
 
 eval set -- "$options"
 
@@ -35,8 +35,12 @@ jq -r --arg package_filter "${package_filter}" \
   -f ${scriptdir}/meta_reader.jq \
   "${scriptdir}/../meta/builds.json" \
 | while read line; do
+  (
+  srcdir="/tmp/src.$BASHPID"
+
   #shellcheck disable=SC2064
-  trap "rm -r /tmp/src.$$ >/dev/null" EXIT
+  trap "rm -r ${srcdir} >/dev/null" EXIT
+
   declare releases source_package git_repository git_ref original_tarball_url
   eval ${line}
 
@@ -44,31 +48,18 @@ jq -r --arg package_filter "${package_filter}" \
   #  if some inconsiderate programmer has moved a tag or force-committed to a
   #  branch.
   echo "Retreiving git repository for ${source_package} ${git_ref}"
-  git clone ${git_repository} /tmp/src.$$
-  git -C /tmp/src.$$ config advice.detachedHead false
-  git_hash=$(git -C /tmp/src.$$ show-ref -s ${git_ref})
+  git clone ${git_repository} "${srcdir}"
+  git -C "${srcdir}" config advice.detachedHead false
+  git_hash=$(git -C "${srcdir}" show-ref -s ${git_ref})
   [ -z "${git_hash}" ] && { echo ${git_ref} not found in git repository; exit 12; }
-  git -C /tmp/src.$$ checkout ${git_hash}
-  version=$(gsed -n '1s/^.*(\s*\([-0-9\.]*\)[^-0-9\.].*$/\1/p' /tmp/src.$$/debian/changelog)
-
-  #  TODO:  Move definition of this into the build.json file.
-  # declare platform
-  # if egrep '^Architecture:\s+any\s*$' /tmp/src.$$/debian/control >/dev/null
-  # then
-  #   platform=linux/amd64,linux/arm64,linux/s390x,linux/ppc64le #,linux/arm/v7
-  # else
-  #   platform=linux/amd64
-  # fi
-  # rm -r /tmp/src.$$
+  git -C "${srcdir}" checkout ${git_hash}
+  version=$(gsed -n '1s/^.*(\s*\([-0-9~a-z\.]*\)[^-0-9\.].*$/\1/p' "${srcdir}"/debian/changelog | tr '~' '_')
 
   for release_string in ${releases}; do
     IFS=':' read -r release platform_json <<< "${release_string}"
 
     #  Execute a build across all platforms of interest
     #
-    #  TODO:  Add a platform argument to the YAML so that non-binary builds are
-    #         not running across redundant platforms.  Maybe a builder argument,
-    #         too?
     cd $scriptdir/../docker
     echo "Building ${prefix}/${source_package}:${version}_${release} ..."
     docker buildx build \
@@ -83,10 +74,7 @@ jq -r --arg package_filter "${package_filter}" \
     #  Read the just-created manifest and use it to iterate through the images
     #  created and upload the manifests.
     #
-    #  TODO:  Use parallel and contexts to offload the work and make it
-    #         asynchronous.
-    #
-    docker manifest inspect -v springjp/${source_package}:${version}_${release} \
+    docker manifest inspect -v ${prefix}/${source_package}:${version}_${release} \
     | jq -r '[.]|flatten|.[]|.Descriptor.digest' \
     | while read digest; do
       #docker run springjp/${package}:${git_ref}@${digest} ls /build
@@ -96,4 +84,5 @@ jq -r --arg package_filter "${package_filter}" \
         sh -c "mc -q cp /debs/*.deb ibmcloud/buildah-debs/${release}/"
     done
   done
+  )
 done

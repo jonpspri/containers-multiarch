@@ -40,7 +40,7 @@
     "architectures": [ "amd64" ]
   },
   {
-    "releases": [ "bionic", "eoan", "focal" ],
+    "releases": [ "bionic", "eoan" ],
     "source_package": "containernetworking-plugins",
     "git_repository": "https://github.com/jonpspri/containernetworking-plugins.git",
     "git_ref": "v0.8.5-deb",
