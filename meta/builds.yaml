@@ -1,5 +1,4 @@
----
-# yamllint disable rule:line-length
+---  # yamllint disable rule:line-length
 - "releases": ["bionic", "eoan", "focal"]
   "source_package": "podman"
   "git_repository": "https://github.com/jonpspri/libpod.git"
@@ -14,6 +13,10 @@
   "original_tarball_url": "https://github.com/containers/buildah/archive/v1.14.8.tar.gz"
   "architectures": ["amd64", "arm64", "s390x", "ppc64le"]
 
+# The skopeo package also builds 'containers-common', which is where most of the
+# value comes from.  I'm still considereing whether to add a debconf prompt
+# regarding /etc/containers/registries.conf, which is likely the most-hacked
+# configuration file.  But for now I think the default processing can work out.
 - "releases": ["bionic", "eoan", "focal"]
   "source_package": "skopeo"
   "git_repository": "https://github.com/jonpspri/skopeo.git"
@@ -35,6 +38,10 @@
   "original_tarball_url": "https://github.com/containers/image/archive/v5.4.3.tar.gz"
   "architectures": "amd64"
 
+# Containernetworking-plugins is bundled with focal.  This is not really a
+# backport because it uses the vendor library rather than the Debian Go -dev
+# source packages.  Dunno how I feel about the Debian approach to Go, but this
+# was the easiest way to get to done.
 - "releases": ["bionic", "eoan"]
   "source_package": "containernetworking-plugins"
   "git_repository": "https://github.com/jonpspri/containernetworking-plugins.git"
@@ -42,9 +49,19 @@
   "original_tarball_url": "https://github.com/containernetworking/plugins/archive/v0.8.5.tar.gz"
   "architectures": ["amd64", "arm64", "s390x", "ppc64le"]
 
+#  Conmon is already bundled with eoan and focal, so this stanza should not be
+#  needed for too long...
 - "releases": "bionic"
   "source_package": "conmon"
   "git_repository": "https://github.com/jonpspri/conmon.git"
   "git_ref": "v2.0.15-deb"
   "original_tarball_url": "https://github.com/containers/conmon/archive/v2.0.15.tar.gz"
+  "architectures": ["amd64", "arm64", "s390x", "ppc64le"]
+
+#  Slirp4netns needs a backport to bionic....
+- "releases": "bionic"
+  "source_package": "slirp4netns"
+  "git_repository": "https://github.com/jonpspri/slirp4netns.git"
+  "git_ref": "v0.4.3-deb"
+  "original_tarball_url": "https://github.com/rootless-containers/slirp4netns/archive/v0.4.3.tar.gz"
   "architectures": ["amd64", "arm64", "s390x", "ppc64le"]

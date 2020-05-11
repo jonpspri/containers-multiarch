@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+#
+#  TODO:  Add some proper usage help to the script
+#
+
 options=$(getopt -o '' --long package:,release:,prefix:,pparoot: -- "$@")
 [ $? -eq 0 ] || {
     echo "Incorrect option provided"
@@ -12,7 +16,6 @@ package_filter='.*'
 release_filter='.*'
 prefix='us.icr.io/containers-multiarch'
 pparoot='ppa:jonpspri/containers-multiarch'
-
 
 eval set -- "$options"
 
@@ -27,6 +30,9 @@ while true; do
   shift
 done
 
+#
+#  TODO:  Test for a zero line count and fail with some sort of message
+#
 scriptdir=$(realpath "$(dirname -- $0)")
 yq -cM '.' "${scriptdir}/../meta/builds.yaml" \
 | jq -r --arg package_filter "${package_filter}" \
